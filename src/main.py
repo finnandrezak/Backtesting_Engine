@@ -1,13 +1,18 @@
 import queue
 from data.handler import CSVHandler
+from execution.broker import Broker
 from strategy.SimpleStrategy import SimpleStrategy
+from portfolio.portfolio import Portfolio
 
-#this is were we actually start our simulation of the market. first we start an event queue aswell as a new data handler with our CSV as the input
+
+# this is were we actually start our simulation of the market. first we start an event queue aswell as a new data handler with our CSV as the input
 
 def main():
     events = queue.Queue()
     data_handler = CSVHandler('test_data.csv', events)
     strategy = SimpleStrategy()
+    portfolio = Portfolio(initial_capital=1000000.0)
+    broker = Broker()
 
     print("Starting simulation")
 
@@ -17,17 +22,35 @@ def main():
     while data_handler.continue_backtest:
         data_handler.update_bars()
 
-        try:
-            event = events.get(False)
+        while True:
+            try:
+                event = events.get(False)
+            except queue.Empty:
+                break
+
             print(f"Event caught: {event.type}")
 
             if event.type == 'MARKET':
                 signal = strategy.calculate_signals(event)
                 if signal:
-                    print(f"Signal generated: {signal.signal_type} for: {signal.symbol}")
-        except:
-            pass
+                    events.put(signal)
 
-    print("Simulation ended ended")
+            elif event.type == 'SIGNAL':
+                order = portfolio.update_signal(event)
+                if order:
+                    events.put(order)
+
+            elif event.type == 'ORDER':
+                fill = broker.execute_order(event)
+                if fill:
+                    events.put(fill)
+
+            elif event.type == 'FILL':
+                print(f"fill received: {fill.symbol} at {fill.fill_cost}$")
+                portfolio.update_fill(event)
+
+    print("Simulation ended")
+
+
 if __name__ == '__main__':
-  main()
+    main()
