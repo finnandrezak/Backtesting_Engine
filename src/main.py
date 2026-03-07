@@ -46,8 +46,8 @@ def main():
                     events.put(fill)
 
             elif event.type == 'FILL':
-                print(f"fill received: {fill.symbol} at {fill.fill_cost}$")
                 portfolio.update_fill(event)
+                print(f"fill received: {fill.symbol} at {fill.fill_cost}$")
 
     print("Simulation ended")
 
