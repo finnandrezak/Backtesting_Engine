@@ -7,6 +7,6 @@ class SimpleStrategy(Strategy):
     def calculate_signals(self, event):
         if event.type == 'MARKET':
             "strategy: recognised market event, setting buy order: "
-            signal =SignalEvent('AAPL', '2026.03.06', 'BUY')
+            signal =SignalEvent(event.symbol, event.timestamp, 'BUY', event.end_p)
             return signal
         return None

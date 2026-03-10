@@ -10,8 +10,9 @@ class Portfolio:
         if event.type == 'SIGNAL':
             quantity = 100
             direction = event.signal_type
+            target_price = event.suggested_price
 
-            order = OrderEvent(event.symbol, event.type, quantity, direction)
+            order = OrderEvent(event.symbol, event.type, quantity, direction, target_price)
             print(f"portfolio: order created! {direction} {quantity} {event.symbol}")
             return order
         return None
