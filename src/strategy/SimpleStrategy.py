@@ -1,8 +1,9 @@
 from strategy.base import Strategy
 from src.event import SignalEvent
 
-#first test for a strategy implemented, simply buys as soon as we get a market signal
-
+"""
+placeholder strategy to test functionality
+"""
 class SimpleStrategy(Strategy):
     def calculate_signals(self, event):
         if event.type == 'MARKET':

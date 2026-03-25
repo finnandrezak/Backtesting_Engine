@@ -1,4 +1,7 @@
-#base class for events
+"""
+Base class for events, determines our chain of action from a Market Event (price change)
+ to the Fill Event (execution of order)
+"""
 class Event:
     pass
 
@@ -15,16 +18,17 @@ class MarketEvent(Event):
 
 
 class SignalEvent(Event):
-    def __init__(self, symbol, datetime, signal_type, suggested_price):
+    def __init__(self, symbol, timestamp, signal_type, suggested_price):
         self.type = 'SIGNAL'
         self.symbol = symbol
-        self.datetime = datetime
+        self.timestamp = timestamp
         self.signal_type = signal_type
         self.suggested_price = suggested_price
 
 class OrderEvent(Event):
-    def __init__(self, symbol, order_type, quantity, direction, target_price):
+    def __init__(self, timestamp, symbol, order_type, quantity, direction, target_price):
         self.type = 'ORDER'
+        self.timestamp = timestamp
         self.symbol = symbol
         self.order_type = order_type
         self.quantity = quantity
@@ -36,12 +40,12 @@ class OrderEvent(Event):
               f" quantity = {self.quantity}, direction = {self.direction}")
 
 class FillEvent(Event):
-    def __init__(self, timestamp, symbol, quantity, direction, fill_cost, comission=None):
+    def __init__(self, timestamp, symbol, quantity, direction, fill_cost, commission):
         self.type = 'FILL'
         self.timestamp = timestamp
         self.symbol = symbol
         self.quantity = quantity
         self.direction = direction
         self.fill_cost = fill_cost
-        self.comission = comission if comission is not None else 0.0
+        self.commission = commission
 

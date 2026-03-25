@@ -2,7 +2,9 @@ import pandas as pd
 
 from src.event import MarketEvent
 
-#CSV Handler to handle the input were currently getting from historic csv datasets
+"""
+CSVHandler class: feeds us the CSV data line-by-line, in order for us to structure them in a useful way
+"""
 
 class CSVHandler:
     def __init__(self, csv_file_path, events_queue):
@@ -17,10 +19,9 @@ class CSVHandler:
 
         self.continue_backtest = True
         self.counter = 0
-        print(f"Erfolgreich geladen: {len(self.df)} Zeilen.")
+        print(f"successfully loaded: {len(self.df)} lines.")
 
     #update method that keeps feeding new events into our event queue until the CSV runs out
-
     def update_bars(self):
 
         if self.counter < len(self.df):
@@ -47,10 +48,10 @@ class CSVHandler:
             self.events_queue.put(event)
             self.counter += 1
 
-            print(f"DataHandler: {symbol} @ {end_p} ({timestamp}) gesendet.")
+            print(f"DataHandler: {symbol} @ {end_p} ({timestamp}) sent.")
         else:
             self.continue_backtest = False
-    #Helping method for later analysis to get the latest update
 
+    #Helping method for later analysis to get the latest update
     def get_latest_bar(self):
         return self.df.iloc[self.counter - 1]
