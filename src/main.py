@@ -1,79 +1,93 @@
 import queue
-import matplotlib.pyplot as plt
-
-from portfolio.benchmark import Benchmark
-from src.plotter import Visualizer
+from src.data.data_manager import prepare_backtest_data
 from data.handler import CSVHandler
-from execution.broker import Broker
-from strategy.SMA_Strategy import SMA_Strategy
-from strategy.SimpleStrategy import SimpleStrategy
+from strategy.Advanced_Volatility_Strategy import Advanced_Volatility_Strategy
+from strategy.Regime_Switch_Strategy import Regime_Switch_Strategy
 from portfolio.portfolio import Portfolio
-
+from portfolio.benchmark import Benchmark
+from execution.broker import Broker
+from src.plotter import Visualizer
+from strategy.SMA_Strategy import SMA_Strategy
 
 """
 main: Heart of the System, organizes and executes processes. Implementation of our logic
  to handle events in stages. Gives us necessary data to analyze profitability
-
 """
-def main():
+
+def run_backtest(config):
+    #preparing data
+    data_path = prepare_backtest_data(
+        tickers=config['tickers'],
+        start=config['start'],
+        end=config['end'],
+        interval=config['interval']
+    )
+
+    #Setup
     events = queue.Queue()
-    data_handler = CSVHandler('adv_data.csv', events)
-    strategy = SMA_Strategy()
-    portfolio = Portfolio(strategy.stop_loss_pct, initial_capital=1000000.0)
-    benchmark = Benchmark(initial_capital=1000000.0)
+    data_handler = CSVHandler(data_path, events)
+    strategy = config['strategy_class']() # Instanziiert die gewählte Klasse
+
+    portfolio = Portfolio(
+        stop_loss_pct=config['stop_loss'],
+        risk_per_trade_pct=config['risk_per_trade_pct'],
+        initial_capital=config['capital']
+    )
+    benchmark = Benchmark(initial_capital=config['capital'])
     broker = Broker()
 
-    print("Starting simulation")
-
-    # our basic loop for simulating the market: we are constantly updating the bars, until our CSV runs out of
-    # information. when we receive a new Market Event, we give it over to our selected strategy so it can be handled
-
+    #logic
+    print(f"Simuliere Regime-Switch auf {config['tickers']}...")
     while data_handler.continue_backtest:
         data_handler.update_bars()
-
         while True:
             try:
                 event = events.get(False)
             except queue.Empty:
                 break
 
-            print(f"Event caught: {event.type}")
             if event.type == 'MARKET':
                 portfolio.update_market(event)
                 benchmark.update(event.timestamp, event.symbol, event.end_p)
-                sl_order = portfolio.check_stop_loss(event)
 
-                if sl_order:
-                    events.put(sl_order)
-                    continue
+                curr_pos = portfolio.holdings.get(event.symbol, 0)
+                # Stop Loss Check
+                if curr_pos > 0:
+                    sl_order = portfolio.check_stop_loss(event)
+                    if sl_order:
+                        events.put(sl_order)
+                        continue
 
-                signal = strategy.calculate_signals(event)
-                if signal:
-                    events.put(signal)
+                signal = strategy.calculate_signals(event, curr_pos)
+                if signal: events.put(signal)
 
             elif event.type == 'SIGNAL':
                 order = portfolio.update_signal(event, broker)
-                if order:
-                    events.put(order)
+                if order: events.put(order)
 
             elif event.type == 'ORDER':
                 fill = broker.execute_order(event)
-                if fill:
-                    events.put(fill)
+                if fill: events.put(fill)
 
             elif event.type == 'FILL':
                 portfolio.update_fill(event)
-                print(f"fill received: {event.symbol} at {event.fill_cost}$")
 
-    print("Market data finished. Closing all open positions...")
+    #results
     portfolio.liquidate_all_positions(broker)
-
-    print("Simulation ended")
-    print(f"total value: {portfolio.get_equity()} $")
-
-    #visual presentation of equity curve and statistics with matplot lib
     stats = portfolio.get_statistics(benchmark.get_curve())
     Visualizer.plot_results(portfolio.equity_curve, stats, benchmark.get_curve())
 
 if __name__ == "__main__":
-    main()
+    #config
+    my_config = {
+        'tickers': ['SPY'],
+        'start': '2020-01-01',
+        'end': '2021-01-01',
+        'interval': '1d',
+        'capital': 1000000.0,
+        'stop_loss': 0.2,
+        'risk_per_trade_pct': 0.5,
+        'strategy_class': Advanced_Volatility_Strategy
+    }
+
+    run_backtest(my_config)

@@ -26,7 +26,8 @@ class Visualizer:
             f"Final Equity: {stats['final']:.2f} $\n"
             f"Total Return: {stats['return_pct']:.2f} %\n"
             f"Benchmark Return: {stats['benchmark_return']:.2f} %\n"
-            f"Max Drawdown: {stats['max_drawdown']:.2f} %"
+            f"Max Drawdown: {stats['max_drawdown']:.2f} %\n"
+            f"Sharpe Ratio: {stats['sharpe_ratio']:.2f} %"
         )
         #positioning metrics box
         plt.gca().text(0.02, 0.95, stats_text, transform = plt.gca().transAxes,

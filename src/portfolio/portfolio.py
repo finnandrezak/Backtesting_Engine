@@ -1,15 +1,16 @@
-from src.event import MarketEvent
 from src.event import OrderEvent
 from src.event import FillEvent
+import numpy as np
 
 """
 Portfolio Class: keeps track of cash and assets/total holdings
 """
 class Portfolio:
-    def __init__(self, stop_loss_pct, initial_capital=1000000.0):
+    def __init__(self, stop_loss_pct, risk_per_trade_pct, initial_capital=1000000.0):
         self.initial_capital = initial_capital
         self.current_cash = initial_capital
         self.stop_loss_pct = stop_loss_pct
+        self.risk_per_trade_pct = risk_per_trade_pct
         self.holdings = {}
         self.entry_prices = {}
         self.latest_prices = {}
@@ -54,7 +55,7 @@ class Portfolio:
             elif direction == 'BUY':
 
                 current_equity= self.get_equity()
-                risk_per_trade = current_equity *0.10
+                risk_per_trade = current_equity * self.risk_per_trade_pct
                 quantity = int(risk_per_trade / target_price)
                 total_cost = (quantity * target_price) + commission
 
@@ -136,8 +137,6 @@ class Portfolio:
         equity_values = [val for _, val in self.equity_curve]
         initial = self.initial_capital
         final = equity_values[-1]
-
-
         return_pct = ((final - initial ) /initial) * 100
 
         max_drawdown = 0.0
@@ -146,9 +145,13 @@ class Portfolio:
             if val > peak:
                 peak = val
             drawdown = (peak - val) / peak
-
             if drawdown > max_drawdown:
                 max_drawdown = drawdown
+
+        returns = np.diff(equity_values) / equity_values[:-1]
+        sharpe_ratio = 0.0
+        if len(returns) > 1 and np.std(returns) != 0:
+            sharpe_ratio = (np.mean(returns) / np.std(returns)) * np.sqrt(252)
 
         b_initial = benchmark_curve[0][1]
         b_final = benchmark_curve[-1][1]
@@ -160,6 +163,7 @@ class Portfolio:
             'final': final,
             'return_pct': return_pct,
             'max_drawdown': max_drawdown * 100, #(in percentile)
+            'sharpe_ratio': sharpe_ratio,
             'benchmark_return': benchmark_return
         }
 
