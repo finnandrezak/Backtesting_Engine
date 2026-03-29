@@ -1,0 +1,22 @@
+# Python specific
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+ENV/
+.
+# IDE files
+.idea/
+*.swp
+*.sublime-*\n*.code-workspace
+# Data files
+adv_data.csv
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+# Miscellaneous
+*.log
+*.sqlite3
+*.db
