@@ -2,16 +2,11 @@ import yfinance as yf
 import pandas as pd
 import os
 
-"""
-Data Downloader: downloads multiple tickers and combines them chronologically
-Intevall-Options: '1m' (max 7 days), '1h' (max 2 years), '1d' (max 50+ years)
-"""
-
-def download_advanced_data (tickers, start, end, interval='1h'):
+def download_advanced_data(tickers, start, end, interval='1h'):
     combined_data = []
 
     for ticker in tickers:
-        print(f"loading data for: {ticker}")
+        print(f"Loading data for {ticker}...")
         df = yf.download(ticker, start=start, end=end, interval=interval)
 
         if df.empty:

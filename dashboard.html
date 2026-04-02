@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Trading Backtest Engine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { font-family: system-ui, -apple-system, sans-serif; font-weight: 800; }
+        body { background-color: #36454F; }
+        input, select { background-color: rgba(255, 253, 208, 0.15) !important; border: 2px solid rgba(255, 253, 208, 0.4) !important; color: #FFFDD0 !important; font-weight: 700; padding: 10px !important; }
+        input:focus, select:focus { outline: none; background-color: rgba(255, 253, 208, 0.25) !important; border-color: #FFFDD0 !important; }
+        .btn { padding: 12px 16px; border-radius: 6px; border: 2px solid rgba(255, 253, 208, 0.35); background-color: rgba(255, 253, 208, 0.1); color: #FFFDD0; cursor: pointer; font-weight: 800; transition: 0.2s; }
+        .btn:hover { background-color: rgba(255, 253, 208, 0.2); border-color: rgba(255, 253, 208, 0.7); }
+        .btn.active { background-color: #FFFDD0; border-color: #FFFDD0; color: #36454F; box-shadow: 0 0 15px rgba(255, 253, 208, 0.4); }
+    </style>
+</head>
+<body style="background-color: #36454F;">
+    <header style="background-color: #2C3A47; border-bottom: 4px solid #FFFDD0;">
+        <div class="max-w-7xl mx-auto px-8 py-8">
+            <h1 style="color: #FFFDD0; font-weight: 900; font-size: 2.5rem;" class="tracking-tight">⚡ TRADING BACKTEST ENGINE</h1>
+            <p style="color: #FFFDD0; font-weight: 800; font-size: 0.9rem; margin-top: 0.5rem;">PROFESSIONAL SUITE</p>
+        </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto p-8">
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+
+            <!-- CONFIG PANEL -->
+            <div style="background-color: #2C3A47; color: #FFFDD0; border: 3px solid rgba(255, 253, 208, 0.3);" class="rounded-lg p-8 h-fit">
+                <h2 style="font-weight: 900; font-size: 1.5rem;" class="mb-8">CONFIGURATION</h2>
+
+                <div class="space-y-6">
+                    <!-- STRATEGY -->
+                    <div>
+                        <label style="font-weight: 900; color: #FFFDD0; font-size: 0.9rem;" class="block mb-3">STRATEGY</label>
+                        <div class="space-y-2">
+                            <button class="btn w-full text-left active" data-strategy="SMA_Strategy" onclick="selectStrategy(this)">SMA Strategy</button>
+                            <button class="btn w-full text-left" data-strategy="Advanced_Volatility_Strategy" onclick="selectStrategy(this)">Advanced Volatility</button>
+                            <button class="btn w-full text-left" data-strategy="Regime_Switch_Strategy" onclick="selectStrategy(this)">Regime Switch</button>
+                            <button class="btn w-full text-left" data-strategy="SimpleStrategy" onclick="selectStrategy(this)">Simple Strategy</button>
+                        </div>
+                    </div>
+
+                    <!-- INTERVAL -->
+                    <div>
+                        <label style="font-weight: 900; color: #FFFDD0; font-size: 0.9rem;" class="block mb-3">TIMEFRAME</label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button class="btn active text-center" data-interval="1d" onclick="selectInterval(this)">1D</button>
+                            <button class="btn text-center" data-interval="1h" onclick="selectInterval(this)">1H</button>
+                            <button class="btn text-center" data-interval="1w" onclick="selectInterval(this)">1W</button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label style="font-weight: 900;" class="block mb-2 text-sm">TICKER</label>
+                        <input type="text" id="tickers" value="SPY" class="w-full rounded">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label style="font-weight: 900;" class="block mb-2 text-xs">START</label>
+                            <input type="date" id="startDate" value="2020-01-01" class="w-full rounded">
+                        </div>
+                        <div>
+                            <label style="font-weight: 900;" class="block mb-2 text-xs">END</label>
+                            <input type="date" id="endDate" value="2021-01-01" class="w-full rounded">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label style="font-weight: 900;" class="block mb-2 text-sm">CAPITAL ($)</label>
+                        <input type="number" id="capital" value="1000000" class="w-full rounded">
+                    </div>
+
+                    <div>
+                        <label style="font-weight: 900;" class="block mb-2 text-sm">STOP LOSS (%)</label>
+                        <input type="number" id="stopLoss" value="20" class="w-full rounded">
+                    </div>
+
+                    <div>
+                        <label style="font-weight: 900;" class="block mb-2 text-sm">RISK/TRADE (%)</label>
+                        <input type="number" id="riskPercent" value="50" class="w-full rounded">
+                    </div>
+
+                    <button onclick="runBacktest()" style="background-color: #FFFDD0; color: #36454F; border: 2px solid #FFFDD0;" class="w-full py-4 font-black rounded-lg text-lg mt-8 hover:opacity-90 transition">
+                        ▶ RUN BACKTEST
+                    </button>
+
+                    <div id="status" style="color: #FFFDD0; font-weight: 800;" class="text-xs mt-4 text-center"></div>
+                </div>
+            </div>
+
+            <!-- MAIN CONTENT -->
+            <div class="lg:col-span-3 space-y-8">
+                <!-- STATS -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div style="background-color: #2C3A47; color: #FFFDD0; border: 2px solid #FFFDD0;" class="rounded-lg p-6">
+                        <p style="font-weight: 900; font-size: 0.75rem;" class="opacity-70">FINAL EQUITY</p>
+                        <p style="font-weight: 900; font-size: 1.875rem;" id="equity" class="mt-3">$0</p>
+                    </div>
+                    <div style="background-color: #2C3A47; color: #FFFDD0; border: 2px solid #FFFDD0;" class="rounded-lg p-6">
+                        <p style="font-weight: 900; font-size: 0.75rem;" class="opacity-70">RETURN</p>
+                        <p style="font-weight: 900; font-size: 1.875rem;" id="returnValue" class="mt-3">0%</p>
+                    </div>
+                    <div style="background-color: #2C3A47; color: #FFFDD0; border: 2px solid #FFFDD0;" class="rounded-lg p-6">
+                        <p style="font-weight: 900; font-size: 0.75rem;" class="opacity-70">SHARPE</p>
+                        <p style="font-weight: 900; font-size: 1.875rem;" id="sharpe" class="mt-3">0.00</p>
+                    </div>
+                    <div style="background-color: #2C3A47; color: #FFFDD0; border: 2px solid #FFFDD0;" class="rounded-lg p-6">
+                        <p style="font-weight: 900; font-size: 0.75rem;" class="opacity-70">DRAWDOWN</p>
+                        <p style="font-weight: 900; font-size: 1.875rem;" id="drawdown" class="mt-3">0.00%</p>
+                    </div>
+                </div>
+
+                <!-- CHART -->
+                <div style="background-color: #2C3A47; color: #FFFDD0; border: 2px solid rgba(255, 253, 208, 0.4);" class="rounded-lg p-8">
+                    <h3 style="font-weight: 900; font-size: 1.1rem;" class="mb-6">EQUITY CURVE</h3>
+                    <canvas id="chart" height="120"></canvas>
+                </div>
+
+                <!-- TRADES -->
+                <div style="background-color: #2C3A47; color: #FFFDD0; border: 2px solid rgba(255, 253, 208, 0.4);" class="rounded-lg p-8">
+                    <h3 style="font-weight: 900; font-size: 1.1rem;" class="mb-6">TRADE HISTORY</h3>
+                    <table class="w-full text-sm">
+                        <thead style="border-bottom: 2px solid rgba(255, 253, 208, 0.3);">
+                            <tr class="opacity-70">
+                                <th style="font-weight: 900; text-align: left;" class="py-3">SYMBOL</th>
+                                <th style="font-weight: 900; text-align: left;" class="py-3">SIDE</th>
+                                <th style="font-weight: 900; text-align: left;" class="py-3">PRICE</th>
+                                <th style="font-weight: 900; text-align: left;" class="py-3">QTY</th>
+                                <th style="font-weight: 900; text-align: left;" class="py-3">P&L</th>
+                                <th style="font-weight: 900; text-align: left;" class="py-3">DATE</th>
+                            </tr>
+                        </thead>
+                        <tbody id="trades">
+                            <tr><td colspan="6" style="text-align: center; padding: 1.5rem; opacity: 0.5;">No trades yet</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let chart = null;
+        let strat = 'SMA_Strategy';
+        let interval = '1d';
+
+        function selectStrategy(btn) {
+            document.querySelectorAll('[data-strategy]').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            strat = btn.dataset.strategy;
+        }
+
+        function selectInterval(btn) {
+            document.querySelectorAll('[data-interval]').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            interval = btn.dataset.interval;
+        }
+
+        async function runBacktest() {
+            document.getElementById('status').textContent = '⏳ Running...';
+            try {
+                const config = {
+                    tickers: document.getElementById('tickers').value.split(',').map(t => t.trim()),
+                    start: document.getElementById('startDate').value,
+                    end: document.getElementById('endDate').value,
+                    interval: interval,
+                    capital: parseFloat(document.getElementById('capital').value),
+                    stop_loss: parseFloat(document.getElementById('stopLoss').value) / 100,
+                    risk_per_trade_pct: parseFloat(document.getElementById('riskPercent').value) / 100,
+                    strategy: strat
+                };
+
+                let res = await fetch('http://localhost:5001/api/backtest', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(config) });
+                let data = await res.json();
+                if (!data.success) { document.getElementById('status').textContent = '❌ ' + (data.error || 'Error'); return; }
+
+                await new Promise(r => setTimeout(r, 500));
+                res = await fetch('http://localhost:5001/api/results?t=' + Date.now());
+                data = await res.json();
+
+                if (data.stats) {
+                    document.getElementById('equity').textContent = '$' + Math.round(data.stats.final).toLocaleString();
+                    document.getElementById('returnValue').textContent = data.stats.return_pct.toFixed(2) + '%';
+                    document.getElementById('sharpe').textContent = data.stats.sharpe_ratio.toFixed(2);
+                    document.getElementById('drawdown').textContent = data.stats.max_drawdown.toFixed(2) + '%';
+                }
+
+                if (data.equity_curve && data.equity_curve.length > 0) {
+                    const labels = data.equity_curve.map(d => new Date(d.timestamp).toLocaleDateString('en', { month: 'short', day: 'numeric' }));
+                    const values = data.equity_curve.map(d => d.value);
+
+                    // Benchmark Curve
+                    let benchmarkData = [];
+                    if (data.benchmark && data.benchmark.length > 0) {
+                        benchmarkData = data.benchmark.map(d => d.value);
+                    }
+
+                    const ctx = document.getElementById('chart').getContext('2d');
+                    if (chart) chart.destroy();
+
+                    const datasets = [{ label: 'Strategy', data: values, borderColor: '#FFFDD0', backgroundColor: 'rgba(255, 253, 208, 0.08)', borderWidth: 2.5, tension: 0.3, fill: true, pointRadius: 0 }];
+
+                    if (benchmarkData.length > 0) {
+                        datasets.push({ label: 'Benchmark', data: benchmarkData, borderColor: 'rgba(255, 253, 208, 0.5)', backgroundColor: 'rgba(255, 253, 208, 0.02)', borderWidth: 1.5, tension: 0.3, fill: false, pointRadius: 0, borderDash: [5, 5] });
+                    }
+
+                    chart = new Chart(ctx, {
+                        type: 'line',
+                        data: { labels: labels, datasets: datasets },
+                        options: {
+                            responsive: true,
+                            plugins: { legend: { labels: { color: 'rgba(255, 253, 208, 0.8)' } }, tooltip: { backgroundColor: 'rgba(44, 58, 71, 0.95)', borderColor: '#FFFDD0', borderWidth: 2, titleColor: '#FFFDD0', bodyColor: '#FFFDD0' } },
+                            scales: { y: { ticks: { color: 'rgba(255, 253, 208, 0.6)', callback: v => '$' + (v/1000000).toFixed(1) + 'M' }, grid: { color: 'rgba(255, 253, 208, 0.08)' } }, x: { ticks: { color: 'rgba(255, 253, 208, 0.6)' }, grid: { color: 'rgba(255, 253, 208, 0.08)' } } }
+                        }
+                    });
+                }
+
+                if (data.trades && data.trades.length > 0) {
+                    document.getElementById('trades').innerHTML = data.trades.map(t => `<tr style="border-bottom: 1px solid rgba(255, 253, 208, 0.1);"><td style="padding: 1rem; font-weight: 800;">${t.symbol}</td><td style="font-weight: 800;">${t.side === 'BUY' ? '▲ BUY' : '▼ SELL'}</td><td style="font-weight: 800;">$${t.price.toFixed(2)}</td><td style="font-weight: 800;">${t.quantity}</td><td style="color: ${parseFloat(t.pnl) >= 0 ? '#90EE90' : '#FFB6C6'}; font-weight: 900;">$${t.pnl.toFixed(2)}</td><td style="opacity: 0.6; font-weight: 800;">${new Date(t.timestamp).toLocaleDateString()}</td></tr>`).join('');
+                }
+
+                document.getElementById('status').textContent = '✅ Complete';
+            } catch (e) { document.getElementById('status').textContent = '❌ ' + e.message; }
+        }
+    </script>
+</body>
+</html>
+

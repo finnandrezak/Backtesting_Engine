@@ -1,11 +1,5 @@
-from strategy.base import Strategy
+from src.strategy.base import Strategy
 from src.event import SignalEvent
-
-"""
-classic and simple Moving average Strategy:
-calculates moving average and compares it with current price, 
-doesn't hold positions bigger than 500 shares to combat volatility
-"""
 
 
 class SMA_Strategy(Strategy):

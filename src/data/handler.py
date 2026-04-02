@@ -2,9 +2,6 @@ import pandas as pd
 
 from src.event import MarketEvent
 
-"""
-CSVHandler class: feeds us the CSV data line-by-line, in order for us to structure them in a useful way
-"""
 
 class CSVHandler:
     def __init__(self, csv_file_path, events_queue):

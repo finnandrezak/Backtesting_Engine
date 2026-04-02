@@ -1,13 +1,10 @@
 import matplotlib.pyplot as plt
-"""
-Visualizer: plots the equity curve of the strategy and compares it to a benchmark. 
-Shows performance metrics in a text box
-"""
+
 class Visualizer:
     @staticmethod
     def plot_results(equity_curve, stats, benchmark_curve=None):
         if not equity_curve:
-            print("Visualizer: No data to plot")
+            print("No data to plot")
             return
 
         times, values = zip(*equity_curve)

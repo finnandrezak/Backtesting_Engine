@@ -2,20 +2,14 @@ import yfinance as yf
 import pandas as pd
 import os
 
-"""
-Data Manager: orchestrates download and processing of data
-returns path to the created csv
-"""
-
 def prepare_backtest_data(tickers, start, end, interval='1h'):
-
     combined_data = []
-    print(f"--- Starte Daten-Vorbereitung für: {tickers} ---")
+    print(f"Preparing data for {tickers}...")
 
     for ticker in tickers:
         df = yf.download(ticker, start=start, end=end, interval=interval)
         if df.empty:
-            print(f"Warning: Keine Daten für {ticker}")
+            print(f"Warning: No data for {ticker}")
             continue
 
         if isinstance(df.columns, pd.MultiIndex):
@@ -42,5 +36,5 @@ def prepare_backtest_data(tickers, start, end, interval='1h'):
     output_path = 'adv_data.csv'
     final_df.to_csv(output_path, index=False)
 
-    print(f"--- Daten bereit: {len(final_df)} Zeilen in {output_path} ---")
+    print(f"Data ready: {len(final_df)} rows in {output_path}")
     return output_path

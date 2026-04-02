@@ -1,21 +1,15 @@
 import queue
-from src.data.data_manager import prepare_backtest_data
+from data.data_manager import prepare_backtest_data
 from data.handler import CSVHandler
 from strategy.Advanced_Volatility_Strategy import Advanced_Volatility_Strategy
 from strategy.Regime_Switch_Strategy import Regime_Switch_Strategy
+from strategy.SMA_Strategy import SMA_Strategy
 from portfolio.portfolio import Portfolio
 from portfolio.benchmark import Benchmark
 from execution.broker import Broker
-from src.plotter import Visualizer
-from strategy.SMA_Strategy import SMA_Strategy
+from plotter import Visualizer
 
-"""
-main: Heart of the System, organizes and executes processes. Implementation of our logic
- to handle events in stages. Gives us necessary data to analyze profitability
-"""
-
-def run_backtest(config):
-    #preparing data
+def run_backtest(config, show_plot=False):
     data_path = prepare_backtest_data(
         tickers=config['tickers'],
         start=config['start'],
@@ -23,10 +17,9 @@ def run_backtest(config):
         interval=config['interval']
     )
 
-    #Setup
     events = queue.Queue()
     data_handler = CSVHandler(data_path, events)
-    strategy = config['strategy_class']() # Instanziiert die gewählte Klasse
+    strategy = config['strategy_class']()
 
     portfolio = Portfolio(
         stop_loss_pct=config['stop_loss'],
@@ -36,8 +29,7 @@ def run_backtest(config):
     benchmark = Benchmark(initial_capital=config['capital'])
     broker = Broker()
 
-    #logic
-    print(f"Simuliere Regime-Switch auf {config['tickers']}...")
+    print(f"Backtesting on {config['tickers']}...")
     while data_handler.continue_backtest:
         data_handler.update_bars()
         while True:
@@ -72,14 +64,27 @@ def run_backtest(config):
             elif event.type == 'FILL':
                 portfolio.update_fill(event)
 
-    #results
     portfolio.liquidate_all_positions(broker)
     stats = portfolio.get_statistics(benchmark.get_curve())
-    Visualizer.plot_results(portfolio.equity_curve, stats, benchmark.get_curve())
+    
+    if show_plot:
+        Visualizer.plot_results(portfolio.equity_curve, stats, benchmark.get_curve())
+    
+    print("\n" + "="*50)
+    print("BACKTEST RESULTS")
+    print("="*50)
+    print(f"Initial Capital: ${config['capital']:,.2f}")
+    print(f"Final Equity: ${stats['final']:,.2f}")
+    print(f"Return: {stats['return_pct']:.2f}%")
+    print(f"Sharpe Ratio: {stats['sharpe_ratio']:.2f}")
+    print(f"Max Drawdown: {stats['max_drawdown']:.2f}%")
+    print(f"Trades: {len(portfolio.trades)}")
+    print("="*50 + "\n")
+    
+    return portfolio, stats, benchmark
 
 if __name__ == "__main__":
-    #config
-    my_config = {
+    config = {
         'tickers': ['SPY'],
         'start': '2020-01-01',
         'end': '2021-01-01',
@@ -87,7 +92,6 @@ if __name__ == "__main__":
         'capital': 1000000.0,
         'stop_loss': 0.2,
         'risk_per_trade_pct': 0.5,
-        'strategy_class': Advanced_Volatility_Strategy
+        'strategy_class': Regime_Switch_Strategy
     }
-
-    run_backtest(my_config)
+    run_backtest(config, show_plot=True)

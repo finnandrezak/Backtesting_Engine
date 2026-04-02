@@ -1,13 +1,13 @@
-from strategy.base import Strategy
+from src.strategy.base import Strategy
 from src.event import SignalEvent
 
-"""
-placeholder strategy to test functionality
-"""
 class SimpleStrategy(Strategy):
-    def calculate_signals(self, event):
+    def calculate_signals(self, event, current_pos):
         if event.type == 'MARKET':
-            "strategy: recognised market event, setting buy order: "
-            signal =SignalEvent(event.symbol, event.timestamp, 'BUY', event.end_p)
-            return signal
+            if current_pos == 0:
+                signal = SignalEvent(event.symbol, event.timestamp, 'BUY', event.end_p)
+                return signal
+            elif current_pos > 0:
+                signal = SignalEvent(event.symbol, event.timestamp, 'SELL', event.end_p)
+                return signal
         return None

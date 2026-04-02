@@ -1,5 +1,5 @@
 import numpy as np
-from strategy.base import Strategy
+from src.strategy.base import Strategy
 from src.event import SignalEvent
 
 class Advanced_Volatility_Strategy(Strategy):
@@ -16,7 +16,6 @@ class Advanced_Volatility_Strategy(Strategy):
         if len(prices) < self.rsi_period + 1:
             return 50
         deltas = np.diff(prices)
-        # Kurze RSI Berechnung
         up = np.sum(deltas[deltas >= 0][-self.rsi_period:]) / self.rsi_period
         down = -np.sum(deltas[deltas < 0][-self.rsi_period:]) / self.rsi_period
         if down == 0: return 100
@@ -37,43 +36,33 @@ class Advanced_Volatility_Strategy(Strategy):
 
             self.history[symbol].append(price)
 
-            # Erst starten, wenn genug Daten für den Long-Filter (50 Tage) da sind
             if len(self.history[symbol]) >= self.long_period:
                 if len(self.history[symbol]) > self.long_period:
                     self.history[symbol].pop(0)
 
                 prices = np.array(self.history[symbol])
 
-                # 1. Indikatoren berechnen
-                ema_long = np.mean(prices)
+                alpha = 2 / (self.long_period + 1)
+                ema_long = prices[0]
+                for price in prices:
+                    ema_long = (price * alpha) + (ema_long * (1 - alpha))
+
                 std = np.std(prices[-self.short_period:])
                 upper_band = ema_long + (2 * std)
                 rsi = self.calculate_rsi(prices)
 
-                # 2. NEU: Momentum-Filter (Vergleich mit Preis vor 5 Tagen)
-                # Wir wollen sehen, dass der Preis wirklich "Speed" aufnimmt
                 lookback_5 = prices[-5]
                 price_change_pct = (price - lookback_5) / lookback_5
 
-                # --- DIE GEFILTERTE LOGIK ---
-
-                # KAUF-BEDINGUNG (High Conviction):
-                # - Ausbruch aus Bollinger Band
-                # - Preis über Trend (EMA)
-                # - RSI im "Sweet Spot" (50-65): Kraftvoll, aber nicht überhitzt
-                # - NEU: Momentum-Check (> 2% Anstieg in 5 Tagen)
                 if price > upper_band and price > ema_long:
                     if 50 < rsi < 65 and price_change_pct > 0.02:
                         if self.buy_counter[symbol] < self.max_buys:
                             self.buy_counter[symbol] += 1
-                            print(f"STRATEGY: High Conviction BUY at {price:.2f} (RSI: {rsi:.1f})")
+                            print(f"High conviction BUY at {price:.2f} (RSI: {rsi:.1f})")
                             return SignalEvent(symbol, event.timestamp, 'BUY', price)
 
-                # VERKAUF-BEDINGUNG (Sicherheits-Exit):
-                # - Preis unter EMA (Trendbruch)
-                # - ODER RSI überhitzt (> 75)
                 elif (price < ema_long or rsi > 75) and current_pos > 0:
-                    print(f"STRATEGY: EXIT Signal at {price:.2f} (RSI: {rsi:.1f})")
+                    print(f"Exit signal at {price:.2f} (RSI: {rsi:.1f})")
                     return SignalEvent(symbol, event.timestamp, 'SELL', price)
 
         return None

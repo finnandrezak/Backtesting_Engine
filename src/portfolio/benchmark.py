@@ -1,6 +1,3 @@
-"""
-Benchmark: a simple "Buy-and-Hold" Benchmark, in order to better review our performance
-"""
 
 class Benchmark:
     def __init__(self, initial_capital):

@@ -2,9 +2,6 @@ from src.event import OrderEvent
 from src.event import FillEvent
 import numpy as np
 
-"""
-Portfolio Class: keeps track of cash and assets/total holdings
-"""
 class Portfolio:
     def __init__(self, stop_loss_pct, risk_per_trade_pct, initial_capital=1000000.0):
         self.initial_capital = initial_capital
@@ -15,8 +12,8 @@ class Portfolio:
         self.entry_prices = {}
         self.latest_prices = {}
         self.equity_curve = []
+        self.trades = []
 
-    #keeps prices and equity updated
     def update_market(self, event):
         if event.type == 'MARKET':
             self.latest_prices[event.symbol] = event.end_p
@@ -24,7 +21,7 @@ class Portfolio:
 
     def check_stop_loss(self, event):
         if event.type == 'MARKET':
-            symbol =event.symbol
+            symbol = event.symbol
             price = event.end_p
 
             if symbol in self.holdings and self.holdings[symbol] > 0:
@@ -33,11 +30,10 @@ class Portfolio:
                     price_drop = (entry_price - price) / entry_price
 
                     if price_drop >= self.stop_loss_pct:
-                        print(f"Portfolio: STOP LOSS triggered for {symbol}")
+                        print(f"Stop loss triggered for {symbol}")
                         return OrderEvent(event.timestamp, symbol, 'MARKET', self.holdings[symbol], 'SELL', price)
         return None
 
-    #handles signal events from strategy
     def update_signal(self, event, broker):
         if event.type == 'SIGNAL':
             direction = event.signal_type
@@ -60,14 +56,17 @@ class Portfolio:
                 total_cost = (quantity * target_price) + commission
 
                 if self.current_cash < total_cost:
-                   quantity = int((self.current_cash - commission) /target_price)
+                   quantity = int((self.current_cash - commission) / target_price)
 
                 if quantity <= 0:
-                    print(f"not enough cash to buy even one share of {symbol}")
+                    quantity = 1 if self.current_cash >= (target_price + commission) else 0
+
+                if quantity <= 0:
+                    print(f"Insufficient cash to buy {symbol}")
                     return None
 
             order = OrderEvent(event.timestamp, event.symbol, 'MARKET', quantity, direction, target_price)
-            print(f"portfolio: order created! {direction} {quantity} {event.symbol}")
+            print(f"Order created: {direction} {quantity} shares of {event.symbol}")
             return order
 
         return None
@@ -91,7 +90,7 @@ class Portfolio:
                 self.entry_prices[symbol] = total_cost / new_total_qty
 
             self.current_cash -= (trade_cost + fee)
-            self.holdings[symbol] = current_qty + fill_event.quantity
+            self.holdings[symbol] = current_qty + quantity
 
         elif fill_event.direction == 'SELL':
             self.current_cash += (trade_cost - fee)
@@ -99,6 +98,19 @@ class Portfolio:
 
             if self.holdings[symbol] <= 0:
                 self.entry_prices[symbol] = 0.0
+
+        pnl = 0
+        if fill_event.direction == 'SELL':
+            pnl = (fill_event.fill_cost - self.entry_prices.get(symbol, fill_event.fill_cost)) * quantity - fee
+
+        self.trades.append({
+            'symbol': symbol,
+            'side': fill_event.direction,
+            'price': fill_event.fill_cost,
+            'quantity': quantity,
+            'timestamp': str(fill_event.timestamp),
+            'pnl': pnl
+        })
 
         print(
             f"Portfolio update: {fill_event.symbol}, holdings: {self.holdings[fill_event.symbol]} , cash: {self.current_cash:.2f}$")
@@ -128,6 +140,12 @@ class Portfolio:
                 last_time = self.equity_curve[-1][0]
                 final_fill = FillEvent(last_time, symbol, quantity, 'SELL', last_price, broker.commission)
                 self.update_fill(final_fill)
+        
+        # Aktualisiere equity_curve mit finaler equity
+        if self.equity_curve:
+            final_equity = self.get_equity()
+            self.equity_curve[-1] = (self.equity_curve[-1][0], final_equity)
+            print(f"✅ Liquidation complete. Final Equity: ${final_equity:,.2f}")
 
 
     def get_statistics(self, benchmark_curve):
@@ -166,4 +184,9 @@ class Portfolio:
             'sharpe_ratio': sharpe_ratio,
             'benchmark_return': benchmark_return
         }
-
+    
+    def get_equity_curve_data(self):
+        return [{'timestamp': str(ts), 'value': float(val)} for ts, val in self.equity_curve]
+    
+    def get_trades_data(self):
+        return self.trades[-20:]

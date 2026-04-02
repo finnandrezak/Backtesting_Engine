@@ -1,7 +1,3 @@
-"""
-Base class for events, determines our chain of action from a Market Event (price change)
- to the Fill Event (execution of order)
-"""
 class Event:
     pass
 
