@@ -141,11 +141,11 @@ class Portfolio:
                 final_fill = FillEvent(last_time, symbol, quantity, 'SELL', last_price, broker.commission)
                 self.update_fill(final_fill)
         
-        # Aktualisiere equity_curve mit finaler equity
+        # update the equity curve with the final equity after liquidation
         if self.equity_curve:
             final_equity = self.get_equity()
             self.equity_curve[-1] = (self.equity_curve[-1][0], final_equity)
-            print(f"✅ Liquidation complete. Final Equity: ${final_equity:,.2f}")
+            print(f"Liquidation complete. Final equity: ${final_equity:,.2f}")
 
 
     def get_statistics(self, benchmark_curve):
@@ -180,7 +180,7 @@ class Portfolio:
             'initial': initial,
             'final': final,
             'return_pct': return_pct,
-            'max_drawdown': max_drawdown * 100, #(in percentile)
+            'max_drawdown': max_drawdown * 100, # in percent
             'sharpe_ratio': sharpe_ratio,
             'benchmark_return': benchmark_return
         }
